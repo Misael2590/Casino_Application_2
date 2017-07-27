@@ -1,0 +1,421 @@
+/// FINAL PROJECT
+/// 
+/// </summary>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+
+namespace GrouP_C_Project
+{
+    //CASINO CLASS
+    class casino
+    {
+        public string cas_name { get; set; }
+        public string cas_state { get; set; }
+
+        public casino()
+        {
+        }
+        public casino(string name, string state)
+        {
+            cas_name = name;
+            cas_state = state;
+        }
+    }
+    //PLAYER CLASS
+    [Serializable]
+    class player
+    {
+        public int pl_ssn { get; set; }
+        public string pl_fname { get; set; }
+        public string pl_lname { get; set; }
+        //public double pl_winnings { get; set; }
+
+        //Default Constructor
+        public player()
+        {
+            pl_ssn = 0;
+            pl_fname = "";
+            pl_lname = "";
+            //pl_winnings = 0;
+        }
+        //Overwriten constructor
+        public player(int pl_ssn, string pl_fname, string pl_lname)
+        {
+            this.pl_ssn = pl_ssn;
+            this.pl_fname = pl_fname;
+            this.pl_lname = pl_lname;
+            //this.pl_winnings = 0;
+        }
+
+        //##################################################################
+
+        public override bool Equals(object obj)
+        {
+            player temp = (player)obj;
+
+            if (temp == null)
+                return false;
+            if (this.GetHashCode() == temp.GetHashCode())
+                return true;
+            else
+                return false;
+        }
+        //
+        //Override GetHashCode to return SSN
+        //
+        public override int GetHashCode()
+        {
+            return pl_ssn;
+        }
+        //##################################################################
+
+    }
+    //WINNINGS CLASS - This class derives from player as winnings is an attribute of a player. 
+    [Serializable]
+    class winnings : player, IComparable
+    {
+        //double[] earnings = new double[2];
+        public double[] playerEarnings = new double[8];
+
+        //Constructor that takes information for player
+        public winnings(int pl_ssn, string pl_fname, string pl_lname, double[] playerEarnings)
+        {
+            this.pl_ssn = pl_ssn;
+            this.pl_fname = pl_fname;
+            this.pl_lname = pl_lname;
+            //copy all values in the array passed into this constructor to the local array.
+            for (int i = 0; i < playerEarnings.Length; i++)
+            {
+                this.playerEarnings[i] = playerEarnings[i];
+            }
+        }//end constructor
+
+        //########################################################################################
+
+        //Use the IComparale interface to compare total winnings
+        int IComparable.CompareTo(object obj)
+        {
+            int returnNum;
+
+            winnings temp = (winnings)obj;
+
+            if (this.pl_ssn > temp.pl_ssn)
+                returnNum = 1;
+            else
+                if (this.pl_ssn < temp.pl_ssn)
+                returnNum = -1;
+            else
+                returnNum = 0;
+
+            return returnNum;
+
+
+        }
+        //
+        //Override ToString to display information for each object
+        public override string ToString()
+        {
+            return "   " + pl_ssn + "  |  " + pl_fname + " " + pl_lname + "  |  ";
+        }
+
+
+    }//end winnings class
+
+    //########################################################################################
+
+    class addPlayers
+    {
+        //this class adds players to the players array. 
+        int pl_ssn;
+        string pl_fname;
+        string pl_lname;
+        double[] earnings = new double[8];
+        string check;
+        const string FILENAME = "PokerPlayer.txt";
+        static FileStream File = new FileStream(FILENAME, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+        StreamWriter writer = new StreamWriter(File);
+        StreamReader reader = new StreamReader(File);
+        BinaryFormatter bFormatter = new BinaryFormatter();
+        //set it to 30 since there's no requirement as to how many players can be added. 
+        winnings[] playerWinnings = new winnings[30];//winnings array. 
+
+        public void addPlayer()
+        {
+            char morePlayers = 'y';//used to check if user wants to add more players.
+            char tempChar = 'Y';
+            char didPlay = 'y';//used to ask the user whether or not the player they're entering played on a given week. 
+
+            //Ask user to enter players until the user specifies he/she doesn't need to enter more. 
+            while (morePlayers == 'y' || morePlayers == 'Y')
+            {
+
+
+                //the following checks to see what's the total count of non-null elements in the playerWinnings arary
+                //this will be used to allocate each new entry in the next available null spot. 
+                int result = playerWinnings.Count(s => s != null);
+                Console.WriteLine("There are currently {0} elements that are null.", result);
+
+                Console.Write("Enter player’s SSN: ");
+                check = Console.ReadLine();
+                //ensure SSN contains 7 characters only
+                while (check.Length != 9)
+                {
+                    Console.Write("**SSN must 7 numbers and no special characters. Please enter player's SSN --> ");
+                    check = Console.ReadLine();
+                }
+                //ensure entered value is an int.
+                while (!int.TryParse(check, out pl_ssn))
+                {
+                    Console.Write("Entry was invalid, Please re-enter player's ssn: ");
+                    check = Console.ReadLine();
+                }
+                Console.Write("Enter player’s First Name: ");
+                pl_fname = Convert.ToString(Console.ReadLine());
+                Console.Write("Enter player’s Last Name: ");
+                pl_lname = Convert.ToString(Console.ReadLine());
+                Console.WriteLine();
+
+                //ENTER PLAYER'S WINNINGS
+                //User will be asked if the player participated during weeks 1-8. If user enters Y, the user will be required
+                //to enter the winnings for that week. If the user enters N, the winnings for that week will be defaulted to 
+                //zero (0.00). User will be prompted 8 times. 
+                for (int j = 0; j < 8; j++)
+                {
+                    Console.Write("Did {0} play during week {1}? (y/n) --> ", pl_fname, j + 1);
+                    check = Console.ReadLine();
+                    //ENSURE THAT THE ENTERED CHARACTER IS ONLY 1 CHAR (instead of two letters, or something else). 
+                    while (!char.TryParse(check, out didPlay))
+                    {
+                        Console.Write("**Invalid Entry. Please enter either Y or N --> ");
+                        check = Console.ReadLine();
+                    }
+                    //This while loops ensures that the character entered is either Y, or N. 
+                    while (didPlay != 'Y' && didPlay != 'y' && didPlay != 'N' && didPlay != 'n')
+                    {
+                        Console.Write("Entry was invalid, Did {0} play during week {1}? (y/n) --> ", pl_fname, j + 1);
+                        check = Console.ReadLine();
+                        //ENSURE THAT THE ENTERED CHARACTER IS ONLY 1 CHAR (instead of two letters, or something else). 
+                        //We need this here again because the first check only ensures that you're entering a char. You could type 1 (which is 
+                        //a valid char) and then be sent to this loop, where the user could enter 'dd' and would throw an execption. 
+                        while (!char.TryParse(check, out didPlay))
+                        {
+                            Console.Write("**Invalid Entry. Please enter either Y or N --> ");
+                            check = Console.ReadLine();
+                        }
+                    }
+
+                    //if player participated, prompt for amount of winnings. 
+                    if (didPlay == 'y')
+                    {
+                        Console.Write("Enter {0}'s winnings for the week of {1}: --> $", pl_fname, j + 1);
+                        check = Console.ReadLine();
+                        //ensure that the entry is a double. 
+                        while (!double.TryParse(check, out earnings[j]))
+                        {
+                            Console.Write("Entry was invalid, Please re-enter {0}'s winnings for week {1}: --> $", pl_fname, (j + 1));
+                            check = Console.ReadLine();
+                        }
+                    }
+                    //if player did not participate, zero out that week. 
+                    else
+                    {
+                        earnings[j] = 0;
+                    }
+
+                }
+
+                //CREATE A PLAYER RECORD
+                //Create a new Winninggs record (which creates a new player entry). 
+                playerWinnings[result] = new winnings(pl_ssn, pl_fname, pl_lname, earnings);
+                //
+                //Show message box with player added information
+                //
+                MessageBox.Show("Player " + playerWinnings[result] + " added!");
+
+                //########################################################################################################################
+                //Call the playersWinnings Equal to check if SSN has been entered
+                //If SSN has been entered clear the array that holds the information
+                //and enter the new formation. I am not sure if this is right. If you have any
+                //other ideas please let me know.
+                //
+
+                for (int D = 0; D < playerWinnings.Length; ++D)
+                    while (playerWinnings[result].Equals(playerWinnings[D]) == true && result != D)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("=====================================================================");
+                        Console.WriteLine("This player has already been entered. The information will be updated ");
+                        Console.WriteLine("=====================================================================");
+                        playerWinnings[D] = null;
+                    }
+                //
+                //Write the playerWinning object into file after checking if SSN has been entered
+                //
+                bFormatter.Serialize(File, playerWinnings[result]);
+                //
+
+                //########################################################################################################################
+                //CLEAR THE EARNINGS ARRAY FOR THE NEXT PLAYER ENTRY
+                Array.Clear(earnings, 0, 8);
+
+                //ASK USER IF THEY WISH TO ENTER MORE PLAYERS. If yes, loop and ask for name and winnings. 
+
+                Console.WriteLine();
+                Console.Write("**Do you wish to add more players? y/n --> ");
+                check = Console.ReadLine();
+
+                while (!char.TryParse(check, out tempChar))
+                {
+                    Console.Write("**Invalid Entry. Please enter either Y or N --> ");
+                    check = Console.ReadLine();
+                }
+
+                //ensure that entered value is either Y/y or N/n
+                while (tempChar != 'n' && tempChar != 'N' && tempChar != 'y' && tempChar != 'Y')
+                {
+                    Console.WriteLine("That is not a valid character. Please enther y or n --> ");
+                    check = Console.ReadLine();
+
+                    while (!char.TryParse(check, out tempChar))
+                    {
+                        Console.Write("**Invalid Entry. Please enter either Y or N --> ");
+                        check = Console.ReadLine();
+                    }
+                }//end tempchar while loop
+
+                //if you get to this point, tempChar is either Y/y or N/n
+                morePlayers = tempChar;
+            }//End morePlayers while loop
+
+        }//end addPlayers()
+
+        public void displayPlayers()
+        {
+
+            Console.WriteLine();
+            Console.WriteLine("###############################################################################");
+            Console.WriteLine();
+
+            //Sort the winnings but since there are some winnings object that are null
+            //because the user did not enter 30 players the sort method sorts the entered
+            //winnings objects at the end of the array
+            Array.Sort(playerWinnings);
+            //Now reverse the order of the array - we are supposed to display players from high to o low based on winnings. 
+            Array.Reverse(playerWinnings);
+
+            Console.WriteLine("Total Winnings by Earnings");
+            Console.WriteLine("____________________________________________________");
+            Console.WriteLine("   SSN #     |      Name      |       Total Winnings");
+            Console.WriteLine("____________________________________________________");
+            for (int r = 0; r < playerWinnings.Length; r++)
+            {
+                if (playerWinnings[r] != null)
+                {
+                    Console.WriteLine(playerWinnings[r].ToString() + playerWinnings[r].playerEarnings.Sum().ToString("C2"));
+                }
+            }
+
+        }
+
+    }//END addPlayer
+
+
+
+
+
+
+    class Program
+    {
+
+        static void Main(string[] args)
+        {
+            string cas_name;
+            string cas_state;
+
+            //instantiate addPlayers class
+            addPlayers addMorePlayers = new addPlayers();
+
+            //creates an array of casinos
+            casino[] casinos = new casino[8];
+            for (int i = 0; i < 8; i++)
+            {
+
+                casinos[i] = new casino();
+            }
+
+            //creates an array of players (up to 30)
+            player[] players = new player[30];
+            for (int i = 0; i < 30; i++)
+            {
+                players[i] = new player();
+            }
+
+            Console.WriteLine("###############################################################################");
+            Console.WriteLine();
+            Console.WriteLine("Welcome to TourneyKeeper!");
+
+            Console.WriteLine();
+            Console.WriteLine("Let's begin by building a list of Casinos where the tournamets will be held.");
+
+            for (int x = 0; x < 8; x++)
+            {
+                Console.Write("Enter the name of the Casino for Week {0}: ", x + 1);
+                cas_name = Convert.ToString(Console.ReadLine());
+                Console.Write("Enter the state (enter 2 letter prefix): ");
+                cas_state = Convert.ToString(Console.ReadLine());
+                casinos[x] = new casino(cas_name, cas_state);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("###############################################################################");
+            Console.WriteLine();
+            Console.WriteLine("Now, let’s create a list of players.");
+            Console.WriteLine("You must enter at least one player.");
+
+            //Ask user to enter players until the user specifies he/she doesn't need to enter more. 
+            addMorePlayers.addPlayer();
+            addMorePlayers.displayPlayers();
+            int menuSelection = 0;
+            string test;
+
+
+
+            while (menuSelection != 4)
+            {
+                Console.WriteLine();
+                Console.WriteLine("###############################################################################");
+                Console.WriteLine("Please select one of the following options: \n\t1. Add a player.\n\t2. Display Winnings. \n\t3. Update winnings.\n\t4. Exit the application");
+                test = Console.ReadLine();
+
+                while (!int.TryParse(test, out menuSelection))
+                {
+                    Console.WriteLine("{0} is not a valid choice. Please choose options 1 - 4  --> ", test);
+                    test = Console.ReadLine();
+                }
+
+                if (menuSelection == 1)
+                {
+                    addMorePlayers.addPlayer();
+                }
+                else if (menuSelection == 2)
+                {
+                    addMorePlayers.displayPlayers();
+                }
+                else if (menuSelection == 3)
+                {
+                }
+
+            }//End menuSelection while
+
+            Console.Write("Press any key to continue . . .");
+            Console.Read();
+        }
+    }
+}
